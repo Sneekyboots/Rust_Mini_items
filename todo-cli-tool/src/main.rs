@@ -1,80 +1,76 @@
-use std::io;
-#[derive(Debug)]
+use clap::{Parser, Subcommand};
+use std::fs;
+use serde::{Serialize, Deserialize};
+
+
+#[derive(Serialize,Deserialize,Debug)]
 struct Task{
     title:String,
-    done:bool
+    done:bool,
 }
 
+#[derive(Parser)]
+#[command(name="todo")]
+#[command(about="Todo list",long_about=None)]
+struct Cli {
+    #[command(subcommand)]
+    command:Commands,
+}
 
-fn main(){
-   let mut tasks:Vec<Task>=Vec::new();
+#[derive(Subcommand)]
+enum Commands{
+    List,
+    Add{title:String},
+    Done{index:usize},
+    Delete{index:usize},
+}
 
-   loop{
-    let mut input=String::new();
-    println!("Enter the todo thing u want to add to list ");
-    io::stdin().read_line(&mut input).expect("Failed to take human input");
-
-    let input =input.trim();
-    if input=="exit"{
-        break;
-    }
-
-    let mut part= input.splitn(2,' ');
-    let command =part.next().unwrap();
-    let args=part.next();
-
-    match command {
-        "todo"=>{
-            if let Some(title)=args{
-                tasks.push(Task {title:title.to_string(),done:false});
-                println!("Added the task {}",title);
-
-            }
-            else{
-                    println!("Please provide a task title.");
-            }
-        },
-        "list"=>{
+fn main (){
+    let cli=Cli::parse;
+    let mut tasks=load_tasks();
+    match &cli().command{
+        Commands::Add{title}=>{
+            tasks.push(Task{title:title.clone(),done:false});
+            save_tasks(&tasks);
+            println!("Added:{}",title);
+        }
+        Commands::List=>{
             for (i,task) in tasks.iter().enumerate(){
-                println!("{}:{}[{}]",i+1,task.title,if task.done {"Done"}else {"TBD"});
-            }
-        },
-        "done"=>{
-        if let Some(num_str)=args{
-            if let Ok(num)=num_str.parse::<usize>(){
-                if num>0 &&num<=tasks.len(){
-                    tasks[num-1].done=true;
-                    println!("Marked task {} as done .",tasks[num-1].title);
-                }
-                else{
-                    println!("Please provide a valid number ");
-                }
-            }
-            else{
-                println!("This cant be parsed into a number")
+                println!("{}:{}[{}]",i+1,task.title,if task.done{"Done"} else {"TBD"});
+
             }
         }
-        },
-        "delete"=>{
-            if let Some(num_str)=args{
-                if let Ok(num)=num_str.parse::<usize>(){
-                    if num>0 &&num<=tasks.len(){
-                        let task=tasks.remove(num-1);
-                        println!("We have removed this tasks {}",task.title);
-                    }
-                    else{
-                        println!("Error the item was not found ")
-                    }
-                    
-                }
-                else{
-                    println!("Please provide a valid number.");
-                }
+
+        Commands::Done{index}=>{
+            if  *index>0 && *index<=tasks.len(){
+                tasks[*index-1].done=true;
+                save_tasks(&tasks);
+                 println!("Marked task {} as done.", index);
+            } else {
+                println!("Invalid task number.");
             }
+            
         }
-        _=>{
-            println!("Unknown command :{}",command);
+        Commands::Delete { index } => {
+            if *index > 0 && *index <= tasks.len() {
+                let removed = tasks.remove(*index - 1);
+                save_tasks(&tasks);
+                println!("Deleted: {}", removed.title);
+            } else {
+                println!("Invalid task number.");
+            }
         }
     }
-   }
+}
+fn save_tasks(tasks: &Vec<Task>) {
+    let data = serde_json::to_string(tasks).unwrap();
+    fs::write("tasks.json", data).unwrap();
+}
+
+fn load_tasks() -> Vec<Task> {
+    if let Ok(data) = fs::read_to_string("tasks.json") {
+        serde_json::from_str(&data).unwrap_or_else(|_| Vec::new())
+    } else {
+        Vec::new()
+    }
 }
