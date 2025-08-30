@@ -1,0 +1,19 @@
+# Rust/Cargo
+target/
+**/*.rs.bk
+Cargo.lock
+
+# IDEs/editors
+.idea/
+.vscode/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# By-products
+*.rlib
