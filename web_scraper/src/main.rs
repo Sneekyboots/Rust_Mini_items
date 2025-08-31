@@ -1,8 +1,20 @@
 use reqwest::blocking;
 use scraper::{Html, Selector};
+use serde::Serialize;
+use std::fs::File;
+use std::io::Write;
+
+
+#[derive(Debug,Serialize)]
+struct Book{
+    title:String,
+    price:String,
+}
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut url = "https://books.toscrape.com/".to_string();
+    let mut books:Vec<Book>=Vec::new();
 
     loop {
         let body = blocking::get(&url)?.text()?;
@@ -18,6 +30,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let name = title_elem.value().attr("title").unwrap_or("No title");
             let price = price_elem.text().collect::<Vec<_>>().join("").to_string();
             println!("{} - {}", name, price);
+            books.push(Book{title:name.to_string(),price})
+
         }
 
         if let Some(next_page) = document.select(&next_selector).next() {
@@ -32,5 +46,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             break; // no more pages
         }
     }
+
+    let json=serde_json::to_string_pretty(&books)?;
+    let mut file=File::create("books.json")?;
+    file.write_all(json.as_bytes())?;
+    println!("Saved {} books to books.json", books.len());
     Ok(())
 }
