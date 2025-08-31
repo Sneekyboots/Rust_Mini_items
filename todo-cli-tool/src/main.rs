@@ -10,7 +10,7 @@ struct Task{
 }
 
 #[derive(Parser)]
-#[command(name="todo")]
+#[command(name="todo-cli-tool")]
 #[command(about="Todo list",long_about=None)]
 struct Cli {
     #[command(subcommand)]
