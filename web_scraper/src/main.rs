@@ -3,6 +3,7 @@ use scraper::{Html, Selector};
 use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
+use notify_rust::Notification;
 
 
 #[derive(Debug,Serialize)]
@@ -29,8 +30,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         {
             let name = title_elem.value().attr("title").unwrap_or("No title");
             let price = price_elem.text().collect::<Vec<_>>().join("").to_string();
+            let price_val: f32 = price.trim_start_matches('£').parse().unwrap_or(9999.0);
+
             println!("{} - {}", name, price);
-            books.push(Book{title:name.to_string(),price})
+            books.push(Book{title:name.to_string(),price});
+if price_val < 20.0 {
+    if let Err(e) = Notification::new()
+        .summary("Price Drop alert !!!")
+        .body(&format!("{} is now only £{:.2}!", name, price_val))
+        .show()
+    {
+        eprintln!("Notification failed: {}", e);
+    }
+}
 
         }
 
