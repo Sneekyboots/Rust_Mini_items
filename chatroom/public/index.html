@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Simple Chat (WSL friendly)</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 700px; margin: 24px auto; }
+      #log { border:1px solid #ddd; height: 360px; overflow:auto; padding:8px; }
+      input { padding:8px; font-size:16px; }
+    </style>
+  </head>
+  <body>
+    <h2>Simple Chat</h2>
+    <div>
+      Name: <input id="name" value="you" />
+      <button id="connect">Connect</button>
+    </div>
+
+    <div id="status">Not connected</div>
+    <div id="log"></div>
+
+    <div style="margin-top:8px;">
+      <input id="msg" placeholder="message" style="width:70%" />
+      <button id="send">Send</button>
+    </div>
+
+    <script>
+      let ws = null;
+      const $ = id => document.getElementById(id);
+      const log = txt => {
+        const d = document.createElement('div');
+        d.textContent = txt;
+        $('log').appendChild(d);
+        $('log').scrollTop = $('log').scrollHeight;
+      };
+
+      $('connect').onclick = () => {
+        if (ws) ws.close();
+        const name = encodeURIComponent($('name').value || 'anon');
+        // use localhost:8080 — from Windows browser this will connect to WSL server
+        ws = new WebSocket('ws://localhost:8080');
+
+        ws.onopen = () => {
+          $('status').textContent = 'Connected';
+          log('connected');
+        };
+        ws.onmessage = e => log(e.data);
+        ws.onclose = () => { $('status').textContent = 'Disconnected'; log('disconnected'); };
+        ws.onerror = e => { $('status').textContent = 'Error'; console.error(e); };
+
+        // attach send handler
+        $('send').onclick = () => {
+          const text = $('msg').value.trim();
+          if (!text) return;
+          const payload = `${$('name').value || 'anon'}: ${text}`;
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(payload); // server will broadcast payload to everyone
+            $('msg').value = '';
+          } else {
+            log('not connected');
+          }
+        };
+
+        // enter to send
+        $('msg').addEventListener('keydown', e => { if (e.key === 'Enter') $('send').click(); });
+      };
+    </script>
+  </body>
+</html>

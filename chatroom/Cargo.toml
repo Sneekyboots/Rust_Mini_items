@@ -1,0 +1,9 @@
+[package]
+name = "chatroom"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }         # async runtime
+tokio-tungstenite = "0.20"                            # WebSocket handshake & stream on tokio
+futures-util = "0.3"                                  # stream combinators (.next())
